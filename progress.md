@@ -13,6 +13,7 @@ TMP: one-step in GoL: state is managed by 2-dim array of one unsigned int
 Game should have two modes, _view_ and _land_. _View_ is static, looking at the whole picture, _land_ is where you land on the picture and walk around
 - Really want this animation where the transition from _view_ mode to _land_ mode is smooth
 - one idea: setup **animation** switch, which prohibits key inputs and "play" the animation (flying according to precalculated trajectory) while it is true. 
-## step5: integrate camera into GoL
+## step5: integrate camera into GoL - done
 game loop and render loop should operate on different threads, when one step in game done -> signal the render loop that the new texture buffer is ready
-## step5.5 (side quest) : investigate the movement speed issue (the velocity doesn't match the reality)
+## step5.5 (side quest) : investigate the movement speed issue (the velocity doesn't match the reality) - done
+## step6 : Add edit mode
