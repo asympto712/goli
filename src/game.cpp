@@ -1,4 +1,4 @@
-#include <game.hpp>
+#include "game.hpp"
 #include <iostream>
 
 
@@ -136,16 +136,18 @@ ui countLiveNeighbors(StateType arr[MAX_ROW][MAX_COL], ui rowId, ui colId)
     return count;
 }
 
-// int main()
-// {
-//     const ui TimeMax = 10;
-//     Game game(10, 10, 12);
-//     game.init();
-//     game.randomPlantSeed(0.5);
-//     for (ui t=0; t<TimeMax; t++)
-//     {
-//         std::cout << "===========================" << std::endl;
-//         game.prettyPrint();
-//         game.step();
-//     }
-// }
+#ifdef CA_DEMO
+int main()
+{
+    const ui TimeMax = 10;
+    Game game(10, 10, 12);
+    game.init();
+    game.randomPlantSeed(0.5);
+    for (ui t=0; t<TimeMax; t++)
+    {
+        std::cout << "===========================" << std::endl;
+        game.prettyPrint();
+        game.step();
+    }
+}
+#endif

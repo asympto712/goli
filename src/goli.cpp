@@ -1,5 +1,5 @@
-#include <goli.hpp>
-#include <utils.hpp>
+#include "goli.hpp"
+#include "utils.hpp"
 #include "gifenc/gifenc.h"
 
 void GAwindowSizeCallback(GLFWwindow* window, int width, int height)
@@ -137,6 +137,7 @@ void GoliApp::setCallbacks()
 
 /// @brief handles input that is appropriate to be processed by Camera alone (not directly concerned with global game/app state)
 /// @param window current context window
+#ifdef GOLI_CPP_PROCESS_INPUT
 void Camera::processInput(GLFWwindow* window)
 {
     // during the animation, do not allow user input
@@ -228,6 +229,7 @@ void Camera::processInput(GLFWwindow* window)
         signalMotion();
     }
 }
+#endif
 
 /// @brief Handles app-side input, or any input that should not be handled solely by Camera
 void GoliApp::processInput()

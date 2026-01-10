@@ -9,7 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <game.hpp>
+#include "game.hpp"
 
 constexpr int gWidth{ 800 };
 constexpr int gHeight{ 600 };
@@ -64,3 +64,5 @@ class App
     void quit();
     void changeSimSpeed(int c);
 };
+
+int basic_app_demo();

@@ -10,7 +10,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cstdint>
-#include <app.hpp>
+#include "app.hpp"
 
 typedef uint8_t DirectionEnum;
 constexpr uint8_t DirectionX{ 0b00000001 };
