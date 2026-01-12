@@ -2,7 +2,7 @@
 
 int basic_app_demo()
 {
-    App app{50, 50, 9};
+    App app{100, 100, 9};
     app.run();
     return 0;
 }
@@ -23,9 +23,11 @@ void App::run()
     preRender();
     while( !glfwWindowShouldClose(window) )
     {
-        render();
+        // TODO: add processEvent that will handle key event, e.g. simulation speed
+        App::handleKeyEvent();
+        App::render();
     }
-    quit();
+    App::quit();
 }
 void App::setCallbacks(wsCallbackPtr wscbFun, kpCallbackPtr kpcbFun, cspCallbackPtr cspcbFun, mbCallbackptr mbcbFun)
 {
@@ -66,6 +68,19 @@ void App::init()
     glfwSetTime(0.0);
     lastTime = glfwGetTime();
     lastStateUpdate = lastTime;
+
+}
+
+void App::handleKeyEvent()
+{
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+    {
+        App::changeSimSpeed(1);
+    }
+    else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+    {
+        App::changeSimSpeed(-1);
+    }
 }
 
 void App::setupBufferTextureObject()
@@ -90,36 +105,6 @@ void App::writeToBufferTexture(StateType cellState[MAX_ROW][MAX_COL])
     {
         glBufferSubData(GL_TEXTURE_BUFFER, i * dimY * 4, dimY * 4, &cellState[i]);
     }
-
-    // very wacky, is there a better way?
-    // Okay, seems like glMapBuffer does not work for GL_TEXTURE_BUFFER as target
-
-    // ui* mappedArr = NULL;
-    // mappedArr = (ui*) glMapBuffer(GL_TEXTURE_BUFFER, GL_READ_WRITE);
-    // if (mappedArr == NULL)
-    // {
-    //     std::cout << "ERROR::GL Texture buffer could not be mapped to the client memory space" << std::endl;
-    //     quit();
-    //     return;
-    // }
-    // for (ui i=0; i<dimX; i++)
-    // {
-    //     for (ui j=0; j<dimY; j++)
-    //     {
-    //         /*
-    //         if alive, draw in white
-    //         else, draw in black
-    //         RGBA and each component should take 1 byte
-    //         */
-    //         if (cellState[i][j] == 0)
-    //             for (ui k=0; k<4; k++)
-    //                 *(mappedArr + i * dimX * 4 + j * 4 + k) = 0;
-    //         else
-    //             for (ui k=0; k<4; k++)
-    //                 *(mappedArr + i * dimX * 4 + j * 4 + k) = 255;
-    //     }
-    // }
-    // glUnmapBuffer(GL_TEXTURE_BUFFER);
 }
 
 void App::setupVertexBufferObject()
@@ -292,7 +277,7 @@ void App::quit()
 
 void App::changeSimSpeed(int c)
 {
-    gameTick += (double) c * gameTickIncre;
+    gameTick -= (double) c * gameTickIncre;
 }
 
 void appKeyPressCallBack(GLFWwindow* window, int key, int scancode, int action, int mods)

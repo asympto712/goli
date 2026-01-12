@@ -62,7 +62,11 @@ class App
     virtual void preRender();
     virtual void render();
     void quit();
+    // reduce the gameTick interval by the number specified by c * gameTickIncre
     void changeSimSpeed(int c);
+    void handleKeyEvent();
+
+    private:
 };
 
 int basic_app_demo();
