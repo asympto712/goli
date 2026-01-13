@@ -251,7 +251,7 @@ void App::render()
     glUseProgram(programID);
     glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(GL_TEXTURE_BUFFER, texID);
-    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA8, BTO);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA8, BTO); // attach a buffer object's data store to a buffer texture object
     glDrawArrays(GL_TRIANGLES, 0, 6 * dimX * dimY);
 
     glfwPollEvents();
