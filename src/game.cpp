@@ -142,20 +142,20 @@ ui countLiveNeighbors(StateType arr[MAX_ROW][MAX_COL], ui rowId, ui colId)
 #ifdef CA_DEMO
 int main()
 {
-    const ui TimeMax = 10;
-    Game game(10, 10, 12);
-    game.init();
-    game.randomPlantSeed(0.5);
-    for (ui t=0; t<TimeMax; t++)
-    {
-        std::cout << "===========================" << std::endl;
-        game.prettyPrint();
-        game.step();
-    }
+    // const ui TimeMax = 10;
+    // Game game(10, 10, 12);
+    // game.init();
+    // game.randomPlantSeed(0.5);
+    // for (ui t=0; t<TimeMax; t++)
+    // {
+    //     std::cout << "===========================" << std::endl;
+    //     game.prettyPrint();
+    //     game.step();
+    // }
 
     int size{10};
     StandardGoL gol{size, size, 12, 0};
-    gol.plantSeed(0.5);
+    gol.randomPopulate(0.5);
     std::vector<std::vector<int>> neighborCount{size};
     for (auto it{neighborCount.begin()}; it != neighborCount.end(); ++it)
     {
@@ -173,12 +173,12 @@ int main()
         std::cout << std::endl;
     }
 
-    // for (int t{0}; t<5; t++)
-    // {
-    //     std::cout << gol << std::endl;
-    //     std::cout << "=======================\n";
-    //     gol.step();
-    // }
+    for (int t{0}; t<5; t++)
+    {
+        std::cout << gol << std::endl;
+        std::cout << "=======================\n";
+        gol.step();
+    }
 
     auto foldIndexCheck{[&](int x, int y){
         GridIndex folded{gol.foldIndex({x, y})};
@@ -200,178 +200,4 @@ std::ostream& operator<<(std::ostream& os, const CellState& cs)
 {
     return os << (cs.isAlive()? 1: 0);
 }
-
-template<ResizableWorld Container>
-CA<Container>::CA(int numRow, int numCol, int seed):
-    m_rngGen{},
-    m_world{},
-    m_tmp_world{}
-    {
-        if (numRow >= 3 && numCol >= 3)
-        {
-            m_numRow = numRow;
-            m_numCol = numCol;
-            m_rngGen.seed(seed);
-        }
-        else
-        {
-            throw WorldInitializationError("initial dimension is too small");
-        }
-
-        m_world.resize(numRow);
-        for (auto it{m_world.begin()}; it != m_world.end(); it++)
-        {
-            it->resize(numCol);
-        }
-
-        m_tmp_world.resize(numRow);
-        for (auto it{m_tmp_world.begin()}; it != m_tmp_world.end(); it++)
-        {
-            it->resize(numCol);
-        }
-        
-        // for debugging
-        std::cout << "After construction\n";
-        std::cout << std::format("m_world.size(): {} X {}\n", m_world.size(), m_world.begin()->size());
-    }
-
-template<ResizableWorld Container>
-CellState& CA<Container>::at(GridIndex idx)
-{
-    return m_world[idx.x][idx.y];
-}
-
-template<ResizableWorld Container>
-const CellState& CA<Container>::at_c(GridIndex idx) const
-{
-    return m_world[idx.x][idx.y];
-}
-
-template<ResizableWorld Container>
-void CA<Container>::change(GridIndex idx, CellState newVal)
-{
-    CA::at(idx) = newVal;
-}
-
-template<ResizableWorld Container>
-void CA<Container>::changeTmp(GridIndex idx, CellState newVal)
-{
-    m_tmp_world[idx.x][idx.y] = newVal;
-}
-
-template<ResizableWorld Container>
-void CA<Container>::swap()
-{
-    std::swap(m_world, m_tmp_world); 
-}
-
-template<ResizableWorld Container>
-std::ostream& operator<<(std::ostream& os, const GoL<Container>& gol)
-{
-    auto [numRow, numCol] = gol.size();
-    for (int i{0}; i<numRow; i++)
-    {
-        for (int j{0}; j<numCol; j++)
-        {
-            os << gol.at_c({i, j}) << " ";
-        }
-        os << "\n";
-    }
-    return os;
-}
-
-template<ResizableWorld Container>
-void GoL<Container>::step()
-{
-    auto [numRow, numCol] = CA<Container>::size();
-    auto cellTransition{[](int neighbor_count, bool isAlive) -> CellState {
-        if ((!isAlive && neighbor_count == 3) ||
-            (isAlive && neighbor_count >= 2 && neighbor_count <= 3))
-        {
-            return CellState(1);
-        }
-        else return CellState(0);
-    }};
-
-    for (int i{0}; i<numRow; i++)
-    {
-        for (int j{0}; j<numCol; j++)
-        {
-            int count{GoL<Container>::countLiveNeighbors({i, j})};
-            bool isAlive{CA<Container>::at({i,j}).isAlive()};
-            auto nextState{cellTransition(count, isAlive)};
-            CA<Container>::changeTmp({i,j}, nextState);
-        }
-    }
-    CA<Container>::swap();
-}
-
-template<ResizableWorld Container>
-GridIndex CA<Container>::foldIndex(GridIndex idx) const
-{
-    int first, second;
-    if (idx.x >= 0 && idx.x < m_numRow) first = idx.x;
-    else first = ((idx.x % m_numRow) + m_numRow) % m_numRow;
-
-    if (idx.y >= 0 && idx.y < m_numCol) second = idx.y;
-    else second = ((idx.y % m_numCol) + m_numCol) % m_numCol;
-
-    return GridIndex{first, second};
-}
-
-template<ResizableWorld Container>
-int GoL<Container>::countLiveNeighbors(GridIndex idx) const
-{
-    std::pair<int, int> size{CA<Container>::size()};
-    int count{0};
-    std::array<GridIndex, 8> neighbor{{{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}}};
-    if (m_boundary_cnd == 0)
-    {
-        for (auto& p: neighbor)
-        {
-            GridIndex folded{CA<Container>::foldIndex(idx + p)};
-            if ((idx + p) == folded) count += CA<Container>::at_c(idx + p).getIntVal();
-        }
-        return count;
-    }
-    else if (m_boundary_cnd == 1)
-    {
-        for (auto& p: neighbor)
-        {
-            GridIndex folded{CA<Container>::foldIndex(idx + p)};
-            count += CA<Container>::at_c(idx + p).getIntVal();
-        }
-        return count;
-    }
-    return 0;
-}
-
-template<ResizableWorld Container>
-void GoL<Container>::countLiveNeighbors(std::vector<std::vector<int>>& out) const
-{
-    auto [numRow, numCol] = CA<Container>::size();
-    for (int i{0}; i<numRow; i++)
-    {
-        for (int j{0}; j<numCol; j++)
-        {
-            out[i][j] = GoL<Container>::countLiveNeighbors({i,j});
-        }
-    }
-}
-
-template<ResizableWorld Container>
-void GoL<Container>::plantSeed(float p)
-{
-    auto [numRow, numCol] = CA<Container>::size();
-    for (int i{0}; i<numRow; ++i)
-    {
-        for (int j{0}; j<numCol; ++j)
-        {
-            float res = CA<Container>::drawRngFloat();
-            if (res <= p)
-                CA<Container>::at({i,j}).makeAlive();
-            else CA<Container>::at({i,j}).makeDead();
-        }
-    }
-} 
 

@@ -15,7 +15,7 @@ int readFile2String(const std::string& filePath, std::string& target)
   return 0;
 }
 
-GLuint shaderFromSource(const char* c_source_string, GLenum shaderType, std::string& shaderPath)
+GLuint shaderFromSource(const char* c_source_string, GLenum shaderType, const std::string& shaderPath)
 {
   GLuint shader{glCreateShader(shaderType)};
   GLint success;
@@ -59,9 +59,14 @@ int linkShaderProgram(GLuint programID, std::vector<GLuint> shaderIDs)
   return 0;
 }
 
-VFShader::VFShader(std::string& vshader_path, std::string& fshader_path):
-m_programID{glCreateProgram()}
+VFShader::VFShader(const std::string& vshader_path, const std::string& fshader_path)
 {
+  VFShader::setup(vshader_path, fshader_path);
+}
+
+void VFShader::setup(const std::string& vshader_path, const std::string& fshader_path)
+{
+  m_programID = glCreateProgram();
   std::string source_code;
   const char* c_source_code;
 
@@ -77,7 +82,7 @@ m_programID{glCreateProgram()}
   linkShaderProgram(m_programID, std::vector<GLuint>{vShaderId, fShaderId});
 }
 
-void VFShader::use()
+void VFShader::use() const
 {
   glUseProgram(m_programID);
 }

@@ -23,7 +23,6 @@ void App::run()
     preRender();
     while( !glfwWindowShouldClose(window) )
     {
-        // TODO: add processEvent that will handle key event, e.g. simulation speed
         App::handleKeyEvent();
         App::render();
     }
