@@ -71,6 +71,7 @@ const int neighDir[] = {
 /// @param arr 2-dim array that represents states
 /// @param tmp an array with the exact same size as arr that stores the temporary transition
 void transitionRule(ui numRow, ui numCol, StateType arr[MAX_ROW][MAX_COL], StateType tmp[MAX_ROW][MAX_COL]);
+
 ui countLiveNeighbors(StateType arr[MAX_ROW][MAX_COL], ui rowId, ui colId);
 /// @brief copy the boundary values of lh to rh
 /// @param numRow number of rows (first dim)
@@ -112,7 +113,7 @@ class Game
 struct CellState
 {
     uint8_t state = 0;
-    CellState(uint8_t _state): state{_state} {}
+    explicit CellState(uint8_t _state): state{_state} {}
     CellState(): state{0}{}
     CellState(bool isAlive) {
         if (isAlive) makeAlive();
@@ -135,10 +136,81 @@ struct CellState
         // return static_cast<int>(state);
         return static_cast<int>(isAlive()? 1: 0);
     }
+    bool operator==(const CellState& other) const {
+        return state == other.state;
+    }
+};
+std::ostream& operator<<(std::ostream& os, const CellState& cs);
 
+struct PackedCell
+{
+    uint8_t data = 0;
+    PackedCell() = default;
+    PackedCell(uint8_t _data): data{_data} {}
+    bool isAliveAt(int idx) const {
+        return (data >> idx) & 1;
+    }
+    void makeAliveAt(int idx) {
+        data |= (1 << idx);
+    }
+    void makeDeadAt(int idx) {
+        data &= ~(1 << idx);
+    }
+    const CellState getState(int idx) const{
+        return CellState{isAliveAt(idx)};
+    }
 };
 
-std::ostream& operator<<(std::ostream& os, const CellState& cs);
+struct QR
+{
+    size_t quotient, remainder;
+    QR() = delete;
+    QR(size_t dividend, size_t divisor): quotient{dividend / divisor}, remainder{dividend % divisor} {}
+    QR(size_t size): QR(size, 8) {}
+    QR(const QR& other) = delete;
+    QR(QR&& other) = delete;
+    QR& operator=(const QR& rh) = delete;
+    QR& operator=(QR&& rh) = delete;
+};
+
+struct PackedCellAlignment
+{
+    std::vector<PackedCell> m_align;
+
+    // constructor & assignment
+    PackedCellAlignment() = default;
+    PackedCellAlignment(int size);
+    PackedCellAlignment(const PackedCellAlignment& _align) = default;
+    PackedCellAlignment(PackedCellAlignment&& _align) = default;
+    PackedCellAlignment& operator=(const PackedCellAlignment& rh) = default;
+    PackedCellAlignment& operator=(PackedCellAlignment&& rh) = default;
+
+    // access internal data
+    std::vector<PackedCell>& data() {
+        return m_align;
+    }
+    const std::vector<PackedCell>& c_data() const {
+        return m_align;
+    }
+
+    // cell access & modify
+    CellState operator[](size_t pos);
+    const CellState operator[](size_t pos) const;
+    // change the cell state to alive, returns the old state
+    CellState makeAliveAt(int idx);
+    // change the cell state to dead, returns the old state
+    CellState makeDeadAt(int idx);
+    CellState changeAt(int idx, CellState newVal);
+    bool isAliveAt(int idx) const;
+
+    // size check & resize
+    size_t size() const;
+    void resize(size_t newSize);
+};
+
+
+using PackedCellContainer = std::vector<PackedCellAlignment>;
+
 
 // general concept that might be used to represent resizable grid space (not finalized)
 // might as well use std::vector
@@ -150,6 +222,15 @@ concept ResizableWorld =
         { T(n) };
         { a.resize(n) };
         { a.size() };
+    };
+
+// this concept requires that the direct reference to the cell state is obtainable by two fold indexing
+// applies to std::vector<std::vector<CellState>>, but not to PackedCellContainer
+template<typename T>
+concept StateRefIndexable = 
+    ResizableWorld<T> &&
+    requires(T a, size_t i, size_t j) {
+        { a[i][j] } -> std::convertible_to<CellState&>;
     };
 
 struct GridIndex {
@@ -190,7 +271,11 @@ struct GridIndex {
         return *this;
     }
 
-    bool operator==(const GridIndex& other) {
+    bool operator==(const GridIndex& other) const {
+        return (this->x == other.x && this->y == other.y);
+    }
+
+    bool operator==(GridIndex& other) {
         return (this->x == other.x && this->y == other.y);
     }
 };
@@ -204,6 +289,9 @@ class CA
     // world size defaults to 3 X 3
     CA();
 
+    Container& mutable_world() {
+        return m_world;
+    }
     const Container& c_world() const {
         return m_world;
     }
@@ -216,13 +304,13 @@ class CA
         m_rngGen.seed(rd());
     }
 
-    CellState& at(GridIndex idx);
-    const CellState& at_c(GridIndex idx) const;
+    // get the cell state of the position by value
+    const CellState get_c(GridIndex idx) const;
 
-    // change the state of the cell in the main buffer
-    void change(GridIndex idx, CellState newVal);
-    // change the state of the cell in the sub buffer
-    void changeTmp(GridIndex idx, CellState newVal);
+    // change the state of the cell in the main buffer and return the old value
+    CellState change(GridIndex idx, CellState newVal);
+    // change the state of the cell in the sub buffer and return the old value
+    CellState changeTmp(GridIndex idx, CellState newVal);
 
     /// @brief swap the two underlying container
     void swap();
@@ -260,6 +348,19 @@ class CA
     int m_numRow = 3, m_numCol = 3;
 };
 
+// return the mutable reference to the cell state of the position
+template<StateRefIndexable SContainer>
+CellState& at(CA<SContainer>& ca, GridIndex idx)
+{
+    return ca.mutable_world()[idx.x][idx.y];
+}
+// return the const reference to the cell state of the position
+template<StateRefIndexable SContainer>
+const CellState& at_c(const CA<SContainer>& ca, GridIndex idx)
+{
+    return ca.c_world()[idx.x][idx.y];
+}
+
 
 template<ResizableWorld Container>
 class GoL: public CA<Container>
@@ -293,7 +394,9 @@ class GoL: public CA<Container>
 };
 
 // The most obvious choice for the grid world container.
-using StandardGoL = GoL<std::vector<std::vector<CellState>>>;
+using SimpleContainer = std::vector<std::vector<CellState>>;
+using StandardGoL = GoL<SimpleContainer>;
+
 
 template<ResizableWorld Container>
 std::ostream& operator<<(std::ostream& os, const GoL<Container>& gol);
@@ -318,7 +421,7 @@ template<ResizableWorld Container>
 CA<Container>::CA(int numRow, int numCol):
 m_rngGen{},
 m_world{{}},
-m_tmp_world{}
+m_tmp_world{{}}
 {
     if (numRow >= 3 && numCol >= 3)
     {
@@ -348,27 +451,28 @@ CA<Container>::CA(3, 3)
 {}
 
 template<ResizableWorld Container>
-CellState& CA<Container>::at(GridIndex idx)
+const CellState CA<Container>::get_c(GridIndex idx) const
 {
     return m_world[idx.x][idx.y];
 }
 
+
 template<ResizableWorld Container>
-const CellState& CA<Container>::at_c(GridIndex idx) const
+CellState CA<Container>::change(GridIndex idx, CellState newVal)
 {
-    return m_world[idx.x][idx.y];
+    auto oldVal = std::move(m_world[idx.x][idx.y]);
+    m_world[idx.x][idx.y] = newVal;
+    return oldVal;
 }
 
 template<ResizableWorld Container>
-void CA<Container>::change(GridIndex idx, CellState newVal)
+CellState CA<Container>::changeTmp(GridIndex idx, CellState newVal)
 {
-    CA::at(idx) = newVal;
-}
-
-template<ResizableWorld Container>
-void CA<Container>::changeTmp(GridIndex idx, CellState newVal)
-{
+    // CellState oldVal = std::exchange(m_tmp_world[idx.x][idx.y], newVal);
+    // return oldVal;
+    auto oldVal = std::move(m_tmp_world[idx.x][idx.y]);
     m_tmp_world[idx.x][idx.y] = newVal;
+    return oldVal;
 }
 
 template<ResizableWorld Container>
@@ -428,7 +532,7 @@ std::ostream& operator<<(std::ostream& os, const GoL<Container>& gol)
     {
         for (int j{0}; j<numCol; j++)
         {
-            os << gol.at_c({i, j}) << " ";
+            os << gol.get_c({i, j}) << " ";
         }
         os << "\n";
     }
@@ -453,7 +557,7 @@ void GoL<Container>::step()
         for (int j{0}; j<numCol; j++)
         {
             int count{GoL<Container>::countLiveNeighbors({i, j})};
-            bool isAlive{CA<Container>::at({i,j}).isAlive()};
+            bool isAlive{CA<Container>::get_c({i,j}).isAlive()};
             auto nextState{cellTransition(count, isAlive)};
             CA<Container>::changeTmp({i,j}, nextState);
         }
@@ -485,7 +589,7 @@ int GoL<Container>::countLiveNeighbors(GridIndex idx) const
         for (auto& p: neighbor)
         {
             GridIndex folded{CA<Container>::foldIndex(idx + p)};
-            if ((idx + p) == folded) count += CA<Container>::at_c(folded).getIntVal();
+            if ((idx + p) == folded) count += CA<Container>::get_c(folded).getIntVal();
         }
         return count;
     }
@@ -494,7 +598,7 @@ int GoL<Container>::countLiveNeighbors(GridIndex idx) const
         for (auto& p: neighbor)
         {
             GridIndex folded{CA<Container>::foldIndex(idx + p)};
-            count += CA<Container>::at_c(folded).getIntVal();
+            count += CA<Container>::get_c(folded).getIntVal();
         }
         return count;
     }
@@ -524,8 +628,15 @@ void GoL<Container>::randomPopulate(float p)
         {
             float res = CA<Container>::drawRngFloat();
             if (res <= p)
-                CA<Container>::at({i,j}).makeAlive();
-            else CA<Container>::at({i,j}).makeDead();
+            {
+                // CA<Container>::at({i,j}).makeAlive();
+                CA<Container>::change({i,j}, {true});
+            }
+            else 
+            {
+                // CA<Container>::at({i,j}).makeDead();
+                CA<Container>::change({i,j}, {false});
+            }
         }
     }
 } 
