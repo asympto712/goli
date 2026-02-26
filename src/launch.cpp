@@ -1,4 +1,4 @@
-#include <goli.hpp>
+#include "goli.hpp"
 #include "gifenc.h"
 
 int main(int argc, char* argv[])

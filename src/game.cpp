@@ -1,5 +1,8 @@
-#include <game.hpp>
+#include "game.hpp"
 #include <iostream>
+#include <vector>
+#include <array>
+#include <tuple>
 
 
 void RGBA8::makeAlive()
@@ -136,16 +139,202 @@ ui countLiveNeighbors(StateType arr[MAX_ROW][MAX_COL], ui rowId, ui colId)
     return count;
 }
 
-// int main()
-// {
-//     const ui TimeMax = 10;
-//     Game game(10, 10, 12);
-//     game.init();
-//     game.randomPlantSeed(0.5);
-//     for (ui t=0; t<TimeMax; t++)
-//     {
-//         std::cout << "===========================" << std::endl;
-//         game.prettyPrint();
-//         game.step();
-//     }
-// }
+
+std::ostream& operator<<(std::ostream& os, const CellState& cs)
+{
+    return os << (cs.isAlive()? 1: 0);
+}
+
+// ======================== Packed Cell member functions =====================================
+PackedCellAlignment::PackedCellAlignment(int size): m_align(static_cast<size_t>(size)) {}
+CellState PackedCellAlignment::operator[](size_t pos)
+{
+    QR qr{pos};
+    return data()[qr.quotient].getState(qr.remainder);
+}
+const CellState PackedCellAlignment::operator[](size_t pos) const
+{
+    QR qr{pos};
+    return c_data()[qr.quotient].getState(qr.remainder);
+}
+CellState PackedCellAlignment::makeAliveAt(int idx)
+{
+    QR qr{static_cast<size_t>(idx)};
+    CellState old_state{data()[qr.quotient].getState(qr.remainder)};
+    data()[qr.quotient].makeAliveAt(qr.remainder);
+    return old_state;
+}
+CellState PackedCellAlignment::makeDeadAt(int idx)
+{
+    QR qr{static_cast<size_t>(idx)};
+    CellState old_state{data()[qr.quotient].getState(qr.remainder)};
+    data()[qr.quotient].makeDeadAt(qr.remainder);
+    return old_state;
+}
+CellState PackedCellAlignment::changeAt(int idx, CellState newVal)
+{
+    if (newVal.isAlive()) return PackedCellAlignment::makeAliveAt(idx);
+    else return PackedCellAlignment::makeDeadAt(idx);
+}
+bool PackedCellAlignment::isAliveAt(int idx) const
+{
+    QR qr{static_cast<size_t>(idx)};
+    return c_data()[qr.quotient].isAliveAt(qr.remainder);
+}
+size_t PackedCellAlignment::size() const
+{
+    return 8 * c_data().size();
+}
+void PackedCellAlignment::resize(size_t newSize)
+{
+    QR qr{newSize};
+    if (qr.remainder == 0) data().resize(qr.quotient);
+    else data().resize(qr.quotient + 1);
+}
+
+
+//============================ custom definitions of some member functions to work with packed container ===================
+template<>
+const CellState CA<PackedCellContainer>::get_c(GridIndex idx) const 
+{
+    return CA<PackedCellContainer>::c_world()[idx.x][idx.y];
+}
+template<>
+CellState CA<PackedCellContainer>::change(GridIndex idx, CellState newVal)
+{
+    return CA::m_world[idx.x].changeAt(idx.y, newVal);
+}
+template<>
+CellState CA<PackedCellContainer>::changeTmp(GridIndex idx, CellState newVal)
+{
+    return CA::m_tmp_world[idx.x].changeAt(idx.y, newVal);
+}
+template<>
+int GoL<PackedCellContainer>::countLiveNeighbors(GridIndex idx) const
+{
+    std::pair<int, int> size{CA<PackedCellContainer>::size()};
+    int count{0};
+    std::array<GridIndex, 8> neighbor{{{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}}};
+    if (m_boundary_cnd == 0)
+    {
+        for (auto& p: neighbor)
+        {
+            GridIndex folded{CA<PackedCellContainer>::foldIndex(idx + p)};
+            if ((idx + p) == folded) count += CA<PackedCellContainer>::get_c(folded).getIntVal();
+        }
+        return count;
+    }
+    else if (m_boundary_cnd == 1)
+    {
+        for (auto& p: neighbor)
+        {
+            GridIndex folded{CA<PackedCellContainer>::foldIndex(idx + p)};
+            count += CA<PackedCellContainer>::get_c(folded).getIntVal();
+        }
+        return count;
+    }
+    return 0;
+}
+template<>
+void GoL<PackedCellContainer>::step()
+{
+    //TODO: change this, alongside all the member functions that needs changing to accommodate PackedCellPackedCellContainer
+    // while refactoring, comment ok means no need to define custom behavior
+
+    auto [numRow, numCol] = CA<PackedCellContainer>::size(); // ok
+    auto cellTransition{[](int neighbor_count, bool isAlive) -> CellState {
+        if ((!isAlive && neighbor_count == 3) ||
+            (isAlive && neighbor_count >= 2 && neighbor_count <= 3))
+        {
+            return CellState(true);
+        }
+        else return CellState(false);
+    }};
+
+    for (int i{0}; i<numRow; i++)
+    {
+        for (int j{0}; j<numCol; j++)
+        {
+            int count{GoL<PackedCellContainer>::countLiveNeighbors({i, j})};
+            bool isAlive{CA<PackedCellContainer>::get_c({i,j}).isAlive()};
+            auto nextState{cellTransition(count, isAlive)};
+            CA<PackedCellContainer>::changeTmp({i,j}, nextState);
+        }
+    }
+    CA<PackedCellContainer>::swap();
+}
+
+template<>
+std::ostream& operator<<(std::ostream& os, const GoL<PackedCellContainer>& gol)
+{
+    auto [numRow, numCol] = gol.size();
+    for (int i{0}; i<numRow; i++)
+    {
+        for (int j{0}; j<numCol; j++)
+        {
+            os << gol.get_c({i, j}) << " ";
+        }
+        os << "\n";
+    }
+    return os;
+}
+
+// ============================custom definitions of some member functions to work with packed container======================
+
+
+#ifdef CA_DEMO
+int main()
+{
+    // const ui TimeMax = 10;
+    // Game game(10, 10, 12);
+    // game.init();
+    // game.randomPlantSeed(0.5);
+    // for (ui t=0; t<TimeMax; t++)
+    // {
+    //     std::cout << "===========================" << std::endl;
+    //     game.prettyPrint();
+    //     game.step();
+    // }
+
+    int size{10};
+    StandardGoL gol{size, size, 12, 0};
+    gol.randomPopulate(0.5);
+    std::vector<std::vector<int>> neighborCount(size);
+    for (auto it{neighborCount.begin()}; it != neighborCount.end(); ++it)
+    {
+        it->resize(size);
+    }
+
+    std::cout << gol << std::endl;
+    gol.countLiveNeighbors(neighborCount);
+    for (auto it{neighborCount.begin()}; it != neighborCount.end(); ++it)
+    {
+        for (auto iit{it->begin()}; iit != it->end(); ++iit)
+        {
+            std::cout << *iit << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    for (int t{0}; t<5; t++)
+    {
+        std::cout << gol << std::endl;
+        std::cout << "=======================\n";
+        gol.step();
+    }
+
+    auto foldIndexCheck{[&](int x, int y){
+        GridIndex folded{gol.foldIndex({x, y})};
+        std::cout << std::format("({},{}) -> ({}, {})\n",x, y, folded.x, folded.y);
+    }};
+
+    foldIndexCheck(-1,-1);
+    foldIndexCheck(-1,0);
+    foldIndexCheck(-1,1);
+    foldIndexCheck(0,-1);
+    foldIndexCheck(0,1);
+    foldIndexCheck(1,-1);
+    foldIndexCheck(1,0);
+    foldIndexCheck(1,1);
+}
+#endif

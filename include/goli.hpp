@@ -1,7 +1,7 @@
 #pragma once
 
-#include <app.hpp>
-#include <camera.hpp>
+#include "app.hpp"
+#include "camera.hpp"
 #include "gifenc/gifenc.h"
 
 void GAwindowSizeCallback(GLFWwindow* window, int width, int height);
