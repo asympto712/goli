@@ -20,7 +20,7 @@ int createCharacterMap(
   }
 
   FT_Face face;
-  if (FT_New_Face(ft, "assets/arial.ttf", 0, &face))
+  if (FT_New_Face(ft, "assets/Ubuntu-LI.ttf", 0, &face)) // change the filename depending on which font .ttf file you have in your assets folder
   {
     std::cout << "Failed to load font\n";
     return 1;

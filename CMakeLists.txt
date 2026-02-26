@@ -9,6 +9,7 @@ find_package(glfw3 3.3 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(glm REQUIRED)
 find_package(Freetype REQUIRED)
+find_package(PNG REQUIRED)
 
 include_directories(include extern/include extern/include/gifenc ${glfw3_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
 
@@ -24,7 +25,7 @@ set_target_properties(game PROPERTIES RUNTIME_OUTPUT_DIRECTORY out)
 
 add_executable(app_demo extern/src/glad.c src/camera.cpp src/game.cpp src/app.cpp src/app_demo.cpp)
 target_compile_definitions(app_demo PRIVATE CAMERA_CPP_PROCESS_INPUT)
-target_link_libraries(app_demo PRIVATE glfw OpenGL::GL glm::glm-header-only Freetype::Freetype)
+target_link_libraries(app_demo PRIVATE glfw OpenGL::GL glm::glm-header-only Freetype::Freetype PNG::PNG bz2 brotlidec) # on linux these last three dependencies must be explicitly linked against
 set_target_properties(app_demo PROPERTIES RUNTIME_OUTPUT_DIRECTORY out)
 
 add_executable(camera_demo extern/src/glad.c src/game.cpp src/camera.cpp src/camera_demo.cpp)
@@ -39,7 +40,7 @@ set_target_properties(launch PROPERTIES RUNTIME_OUTPUT_DIRECTORY out)
 
 add_executable(text_demo extern/src/glad.c src/text.cpp)
 target_compile_definitions(text_demo PRIVATE TEXT_DEMO)
-target_link_libraries(text_demo PRIVATE glfw OpenGL::GL glm::glm-header-only Freetype::Freetype)
+target_link_libraries(text_demo PRIVATE glfw OpenGL::GL glm::glm-header-only Freetype::Freetype PNG::PNG bz2 brotlidec) # on linux these last three dependencies must be explicitly linked against
 set_target_properties(text_demo PROPERTIES RUNTIME_OUTPUT_DIRECTORY out)
 
 add_executable(view_app extern/src/glad.c src/game.cpp src/shader.cpp src/app_interface.cpp src/viewApp.cpp)
