@@ -1,3 +1,9 @@
 This project uses FreeType font renderer library.
 Follow the installation guide from https://freetype.org/download.html and
-download freetype-2.14.1
+download freetype-2.14.1. You also need to put a font file(.ttl) inside `assets/` folder and modify the argument in FT_NEW_FACE function inside "text.cpp" file to match that font name.
+
+For use of Dear ImGui:
+Download and extract archive from the latest Dear ImGui release (https://github.com/ocornut/imgui).
+copy all the (.h) files from the root directory to "extern/include/imgui" folder, and (.cpp) files from the root directory to "extern/src/imgui/" folder.
+Additionally, copy from the backends folder the following to the respective folders:
+"imgui_impl_glfw.(h/cpp)", "imgui_impl_opengl3.(h/cpp)", "imgui_impl_opengl3_loader.(h/cpp)"
