@@ -1,5 +1,7 @@
 #include "goli.hpp"
 #include "gifenc.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
 
 int main(int argc, char* argv[])
 {

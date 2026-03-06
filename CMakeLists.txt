@@ -11,9 +11,11 @@ find_package(glm REQUIRED)
 find_package(Freetype REQUIRED)
 find_package(PNG REQUIRED)
 
-include_directories(include extern/include extern/include/gifenc ${glfw3_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
+file(GLOB IMGUI_SRC "extern/src/imgui/*.cpp")
 
-add_executable(quad extern/src/glad.c src/quad.cpp)
+include_directories(include extern/include extern/include/gifenc extern/include/imgui ${glfw3_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
+
+add_executable(quad ${IMGUI_SRC} extern/src/glad.c src/quad.cpp)
 
 target_link_libraries(quad PRIVATE glfw OpenGL::GL glm::glm-header-only)
 

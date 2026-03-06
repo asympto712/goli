@@ -4,3 +4,4 @@ assets/
 .gitignore
 perf*
 extern/
+imgui.ini
