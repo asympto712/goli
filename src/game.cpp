@@ -1,4 +1,5 @@
 #include "game.hpp"
+#include "game_interface.hpp"
 #include <iostream>
 #include <vector>
 #include <array>
@@ -192,6 +193,23 @@ void PackedCellAlignment::resize(size_t newSize)
     else data().resize(qr.quotient + 1);
 }
 
+//========================= custom definitions of some member functions to work with SimpleContainer =====================
+template<>
+void GoL<SimpleContainer>::writeToStateBuffer(std::vector<CellState>& stateBuffer)
+{
+  auto numRows{GoL<SimpleContainer>::sizeX()};
+  auto numCols{GoL<SimpleContainer>::sizeY()};
+  stateBuffer.resize(numRows * numCols);
+  int idx = 0;
+  for (const auto& row: GoL<SimpleContainer>::c_world() | std::views::take(numRows))
+  {
+    // m_stateBuffer.insert(m_stateBuffer.end(), row.begin(), row.begin() + numCols);
+    std::copy(row.begin(), row.begin() + numCols, stateBuffer.begin() + idx);
+    idx += numCols;
+  }
+}
+
+
 
 //============================ custom definitions of some member functions to work with packed container ===================
 template<>
@@ -262,6 +280,41 @@ void GoL<PackedCellContainer>::step()
         }
     }
     CA<PackedCellContainer>::swap();
+}
+
+// PackedCellContainer = vector<PackedCellAlignment>
+// struct PackedCellAlignment ... vector<PackedCell> obtained by calling data()
+template<>
+void GoL<PackedCellContainer>::setInitConfig()
+{
+    PackedCellContainer ic = mutable_initConfig();
+
+    // resize the outer iterator of ic
+    ic.resize(c_world().size());
+
+    PackedCellContainer::iterator it{ic.begin()};
+    for (PackedCellAlignment e: c_world())
+    {
+        it->data().assign(e.c_data().begin(), e.c_data().end());
+        it++;
+    }
+}
+
+template<>
+void GoL<PackedCellContainer>::writeToStateBuffer(std::vector<CellState>& stateBuffer)
+{
+  auto numRows{GoL<PackedCellContainer>::sizeX()};
+  auto numCols{GoL<PackedCellContainer>::sizeY()};
+  stateBuffer.resize(numRows * numCols);
+  int idx = 0;
+  const PackedCellContainer& world{GoL<PackedCellContainer>::c_world()};
+  for (int i=0; i<numRows; i++)
+  {
+    for (int j=0; j<numCols; j++)
+    {
+        stateBuffer.at(i*numCols + j) = world.at(i)[j];
+    }
+  }
 }
 
 template<>

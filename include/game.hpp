@@ -5,6 +5,8 @@
 #include <random>
 #include <iostream>
 #include <format>
+#include <ranges>
+#include "game_interface.hpp"
 
 constexpr size_t MAX_ROW{ 100 };
 constexpr size_t MAX_COL{ 100 };
@@ -110,38 +112,6 @@ class Game
     ui numRow, numCol;
 };
 
-struct CellState
-{
-    uint8_t state = 0;
-    explicit CellState(uint8_t _state): state{_state} {}
-    CellState(): state{0}{}
-    CellState(bool isAlive) {
-        if (isAlive) makeAlive();
-        else makeDead();
-    }
-    bool isAlive() const
-    {
-        return state != 0;
-    }
-    void makeAlive()
-    {
-        state = 255;
-    }
-    void makeDead()
-    {
-        state = 0;
-    }
-    int getIntVal() const
-    {
-        // return static_cast<int>(state);
-        return static_cast<int>(isAlive()? 1: 0);
-    }
-    bool operator==(const CellState& other) const {
-        return state == other.state;
-    }
-};
-std::ostream& operator<<(std::ostream& os, const CellState& cs);
-
 struct PackedCell
 {
     uint8_t data = 0;
@@ -233,6 +203,9 @@ concept StateRefIndexable =
         { a[i][j] } -> std::convertible_to<CellState&>;
     };
 
+template<ResizableWorld Container>
+void containerAssign(Container& lh, const Container& rh);
+
 struct GridIndex {
     int x, y;
 
@@ -281,7 +254,7 @@ struct GridIndex {
 };
 
 template<ResizableWorld Container>
-class CA
+class CA: public GameInterface
 {
     public:
     CA(int numRow, int numCol, int seed);
@@ -294,6 +267,12 @@ class CA
     }
     const Container& c_world() const {
         return m_world;
+    }
+    Container& mutable_initConfig() {
+        return m_initConfig;
+    }
+    const Container& c_initConfig() const {
+        return m_initConfig;
     }
 
     void seed(int _seed) {
@@ -335,15 +314,16 @@ class CA
     // For example, (-1, -1) should return (m_numRow-1, m_numCol-1)
     GridIndex foldIndex(GridIndex idx) const;
 
-    virtual void step() = 0;
     virtual void randomPopulate(float p) = 0;
     float drawRngFloat() { 
         auto val = m_rngGen();
         return (float) val / (float) m_rngGen.max();
     }
 
+
     private:
     Container m_world, m_tmp_world;
+    Container m_initConfig;
     std::mt19937 m_rngGen;
     int m_numRow = 3, m_numCol = 3;
 };
@@ -375,16 +355,22 @@ class GoL: public CA<Container>
         CA<Container>{numRow, numCol},
         m_boundary_cnd{} {}
 
-    void step() override;
-
     void changeBC(int new_bc) {
         m_boundary_cnd = new_bc;
     }
 
     void randomPopulate(float p) override;
+    // set the initial configuration to be the current m_world
+    void setInitConfig();
 
     int countLiveNeighbors(GridIndex idx) const;
     void countLiveNeighbors(std::vector<std::vector<int>>& out) const;
+
+    // GameInterface functions
+    void step() override;
+    void stepBack() override;
+    void reset() override;
+    void writeToStateBuffer(std::vector<CellState> & stateBuffer) override;
     
     private:
     // 0 if fixed (to 0) b.c
@@ -421,7 +407,8 @@ template<ResizableWorld Container>
 CA<Container>::CA(int numRow, int numCol):
 m_rngGen{},
 m_world{{}},
-m_tmp_world{{}}
+m_tmp_world{{}},
+m_initConfig({})
 {
     if (numRow >= 3 && numCol >= 3)
     {
@@ -566,6 +553,21 @@ void GoL<Container>::step()
 }
 
 template<ResizableWorld Container>
+void GoL<Container>::stepBack()
+{
+
+}
+
+template<ResizableWorld Container>
+void GoL<Container>::reset()
+{
+    const Container& ic{GoL<Container>::c_initConfig()};
+    Container& world{GoL<Container>::mutable_world()};
+    containerAssign<Container>(world, ic);
+}
+
+
+template<ResizableWorld Container>
 GridIndex CA<Container>::foldIndex(GridIndex idx) const
 {
     int first, second;
@@ -640,3 +642,24 @@ void GoL<Container>::randomPopulate(float p)
         }
     }
 } 
+
+
+template<ResizableWorld T>
+void GoL<T>::setInitConfig()
+{
+    T ic = GoL<T>::mutable_initConfig();
+    const T& world{GoL<T>::c_world()};
+    containerAssign<T>(ic, world);
+}
+
+template<ResizableWorld Container>
+void containerAssign(Container& lh, const Container& rh)
+{
+    lh.resize(rh.size());
+    auto refIt{rh.begin()};
+    for (auto it=lh.begin(); it!=lh.end(); it++)
+    {
+        *it = *refIt;
+        refIt++;
+    }
+}
