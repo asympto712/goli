@@ -1,6 +1,6 @@
 #pragma once
 
-#include "app_interface.hpp"
+#include "render_context_interface.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -10,8 +10,8 @@
 class GuiInterface
 {
     public:
-    virtual BasicApp& mutable_app() = 0;
-    virtual const BasicApp& c_app() const = 0;
+    virtual BasicRenderContext& mutable_app() = 0;
+    virtual const BasicRenderContext& c_app() const = 0;
     virtual void contextWindow(GLFWwindow* window) = 0; // contexualize the window
     virtual void newFrame() = 0;  // prepare to step into the new frame (poll inputs, calculate deltas, etc..)
     virtual void drawWidget() = 0; // call to draw the desired widget
@@ -27,9 +27,9 @@ class DearImGui: public GuiInterface
 
     // mode agnostic functions (boilerplates)
     DearImGui() = delete;
-    DearImGui(BasicApp& app);
-    BasicApp& mutable_app() override;
-    const BasicApp& c_app() const override;
+    DearImGui(BasicRenderContext& app);
+    BasicRenderContext& mutable_app() override;
+    const BasicRenderContext& c_app() const override;
     void initGui() override;
     void contextWindow(GLFWwindow* window) override;
     void newFrame() override; // should be called at the beginning of every game loop, before calling handleInput()
@@ -42,17 +42,17 @@ class DearImGui: public GuiInterface
     // void handleInput() override;
 
     private:
-    BasicApp& m_app;
+    BasicRenderContext& m_app;
 };
 
-DearImGui::DearImGui(BasicApp& app):
+DearImGui::DearImGui(BasicRenderContext& app):
 m_app{app} {}
 
-BasicApp& DearImGui::mutable_app()
+BasicRenderContext& DearImGui::mutable_app()
 {
     return m_app;
 }
-const BasicApp& DearImGui::c_app() const
+const BasicRenderContext& DearImGui::c_app() const
 {
     return m_app;
 }

@@ -1,10 +1,10 @@
-#include "app_interface.hpp"
+#include "render_context_interface.hpp"
 #include "game.hpp"
 #include <ranges>
 #include <cstring>
 #include <cstdlib>
 
-#ifdef VIEW_APP
+#ifdef VIEW_renderContext
 #include <iostream>
 #include <format>
 constexpr int DefaultNumRow = 3;
@@ -46,35 +46,35 @@ int main(int argc, char* argv[])
   }
   game.setWorldSize(numRow, numCol);
   game.randomPopulate(popRate);
-  ViewApp app{800, 600, game};
-  // std::cout << app.c_game() << std::endl;
-  std::cout << std::format("numRow: {}, numCol: {}, popRate:{}\n", app.worldSizeX(), app.worldSizeY(), popRate);
+  ViewRenderContext renderContext{800, 600, game};
+  // std::cout << renderContext.c_game() << std::endl;
+  std::cout << std::format("numRow: {}, numCol: {}, popRate:{}\n", renderContext.worldSizeX(), renderContext.worldSizeY(), popRate);
 
   // debugging
   // for (int i{0}; i<5; i++)
   // {
-  //   app.game().step();
-  //   std::cout << app.c_game() << std::endl;
+  //   renderContext.game().step();
+  //   std::cout << renderContext.c_game() << std::endl;
   // }
 
-  app.run();
+  renderContext.run();
 }
 #endif
 
 
-ViewApp::ViewApp(int _width, int _height, GameInterface& game):
-BasicApp(_width, _height),
+ViewRenderContext::ViewRenderContext(int _width, int _height, GameInterface& game):
+BasicRenderContext(_width, _height),
 m_game{game}
 {
 }
 
-ViewApp::ViewApp(int _width, int _height, GameInterface& game, const std::string& _vShaderPath, const std::string& _fShaderPath):
-ViewApp(_width, _height, game)
+ViewRenderContext::ViewRenderContext(int _width, int _height, GameInterface& game, const std::string& _vShaderPath, const std::string& _fShaderPath):
+ViewRenderContext(_width, _height, game)
 {
   setShaderPath(_vShaderPath, _fShaderPath);
 }
 
-void ViewApp::setShaderPath(const std::string& _vShaderPath, const std::string& _fShaderPath)
+void ViewRenderContext::setShaderPath(const std::string& _vShaderPath, const std::string& _fShaderPath)
 {
   std::string& v_shader_path{vShaderPath()};
   std::string& f_shader_path{fShaderPath()};
@@ -82,75 +82,75 @@ void ViewApp::setShaderPath(const std::string& _vShaderPath, const std::string& 
   f_shader_path = _fShaderPath;
 }
 
-void ViewApp::setupShader()
+void ViewRenderContext::setupShader()
 {
-  BasicApp::setupShader(vShaderPath(), fShaderPath());
+  BasicRenderContext::setupShader(vShaderPath(), fShaderPath());
 }
 
-void ViewApp::run()
+void ViewRenderContext::run()
 {
-  ViewApp::setupShader();
-  ViewApp::setupVBO();
-  ViewApp::preRender();
+  ViewRenderContext::setupShader();
+  ViewRenderContext::setupVBO();
+  ViewRenderContext::preRender();
 
-  while (ViewApp::isRunning())
+  while (ViewRenderContext::isRunning())
   {
-    ViewApp::handleKeyEvent();
+    ViewRenderContext::handleKeyEvent();
 
-    ViewApp::render();
+    ViewRenderContext::render();
   }
-  ViewApp::quit();
+  ViewRenderContext::quit();
 }
 
-void ViewApp::preRender()
+void ViewRenderContext::preRender()
 {
   // setup uniforms
-  ViewApp::c_shader().use();
-  GLint uloc{glGetUniformLocation(ViewApp::c_shader().c_ID(), "sizeX")};
-  glUniform1i(uloc, ViewApp::worldSizeX());
-  uloc = glGetUniformLocation(ViewApp::c_shader().c_ID(), "sizeY");
-  glUniform1i(uloc, ViewApp::worldSizeY());
+  ViewRenderContext::c_shader().use();
+  GLint uloc{glGetUniformLocation(ViewRenderContext::c_shader().c_ID(), "sizeX")};
+  glUniform1i(uloc, ViewRenderContext::worldSizeX());
+  uloc = glGetUniformLocation(ViewRenderContext::c_shader().c_ID(), "sizeY");
+  glUniform1i(uloc, ViewRenderContext::worldSizeY());
   
   // Set sampler to use texture unit 0
-  uloc = glGetUniformLocation(ViewApp::c_shader().c_ID(), "sampler");
+  uloc = glGetUniformLocation(ViewRenderContext::c_shader().c_ID(), "sampler");
   glUniform1i(uloc, 0);
 
-  ViewApp::changeLastUpdateTime(glfwGetTime());
+  ViewRenderContext::changeLastUpdateTime(glfwGetTime());
   return;
 }
 
-void ViewApp::render()
+void ViewRenderContext::render()
 {
   updateCellStateTexture();
   glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
   glBindVertexArray(m_VAO[0]);
-  ViewApp::shader().use();
+  ViewRenderContext::shader().use();
   glActiveTexture(GL_TEXTURE0 + 0);
   glBindTexture(GL_TEXTURE_2D, m_texID);
-  glDrawArraysInstanced(GL_TRIANGLES, 0, 6, ViewApp::worldSizeX() * ViewApp::worldSizeY());
+  glDrawArraysInstanced(GL_TRIANGLES, 0, 6, ViewRenderContext::worldSizeX() * ViewRenderContext::worldSizeY());
 
   glfwPollEvents();
-  glfwSwapBuffers(BasicApp::c_window());
+  glfwSwapBuffers(BasicRenderContext::c_window());
 
-  if (!ViewApp::isStopped())
+  if (!ViewRenderContext::isStopped())
   {
     double curTime = glfwGetTime();
-    if (curTime - ViewApp::c_lastUpdateTime() > ViewApp::c_updateInterval())
+    if (curTime - ViewRenderContext::c_lastUpdateTime() > ViewRenderContext::c_updateInterval())
     {
       m_game.step();
       // std::cout << m_game << std::endl; // debugging
-      ViewApp::changeLastUpdateTime(curTime);
+      ViewRenderContext::changeLastUpdateTime(curTime);
     }
   }
 }
 
-void ViewApp::handleKeyEvent()
+void ViewRenderContext::handleKeyEvent()
 {
   if (checkKeyPress(GLFW_KEY_ESCAPE))
   {
-    glfwSetWindowShouldClose(ViewApp::c_window(), 1);
+    glfwSetWindowShouldClose(ViewRenderContext::c_window(), 1);
   }
   else if (checkKeyPress(GLFW_KEY_S))
   {
@@ -168,7 +168,7 @@ void ViewApp::handleKeyEvent()
 
 }
 
-void ViewApp::setupVBO()
+void ViewRenderContext::setupVBO()
 {
   // use instanced drawing
   float rect[]{
@@ -204,14 +204,14 @@ void ViewApp::setupVBO()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   
   // prepare flattened vector for data transfer from game world to texture
-  ViewApp::updateCellStateTexture();
+  ViewRenderContext::updateCellStateTexture();
 }
 
-void ViewApp::updateCellStateTexture()
+void ViewRenderContext::updateCellStateTexture()
 {
   auto numRows{c_game().sizeX()};
   auto numCols{c_game().sizeY()};
-  ViewApp::c_game().writeToStateBuffer(m_stateBuffer);
+  ViewRenderContext::c_game().writeToStateBuffer(m_stateBuffer);
 
   glBindTexture(GL_TEXTURE_2D, m_texID);
   glTexImage2D(
@@ -228,45 +228,45 @@ void ViewApp::updateCellStateTexture()
 }
 
 // internal CA (game) interface
-void ViewApp::CAstep()
+void ViewRenderContext::CAstep()
 {
-  ViewApp::game().step();
+  ViewRenderContext::game().step();
 }
-const int ViewApp::worldSizeX() const
+const int ViewRenderContext::worldSizeX() const
 {
-  return ViewApp::c_game().sizeX();
+  return ViewRenderContext::c_game().sizeX();
 }
-const int ViewApp::worldSizeY() const
+const int ViewRenderContext::worldSizeY() const
 {
-  return ViewApp::c_game().sizeY();
+  return ViewRenderContext::c_game().sizeY();
 }
-const std::pair<int, int> ViewApp::worldSize() const
+const std::pair<int, int> ViewRenderContext::worldSize() const
 {
-  return ViewApp::c_game().size();
+  return ViewRenderContext::c_game().size();
 }
-void ViewApp::setWorldSize(int numRow, int numCol)
+void ViewRenderContext::setWorldSize(int numRow, int numCol)
 {
-  ViewApp::game().setWorldSize(numRow, numCol);
-  ViewApp::resizeStateBuffer(numRow, numCol);
+  ViewRenderContext::game().setWorldSize(numRow, numCol);
+  ViewRenderContext::resizeStateBuffer(numRow, numCol);
 
   // uniform change
-  ViewApp::c_shader().use();
-  GLint uloc{glGetUniformLocation(ViewApp::c_shader().c_ID(), "sizeX")};
-  glUniform1i(uloc, ViewApp::worldSizeX());
-  uloc = glGetUniformLocation(ViewApp::c_shader().c_ID(), "sizeY");
-  glUniform1i(uloc, ViewApp::worldSizeY());
+  ViewRenderContext::c_shader().use();
+  GLint uloc{glGetUniformLocation(ViewRenderContext::c_shader().c_ID(), "sizeX")};
+  glUniform1i(uloc, ViewRenderContext::worldSizeX());
+  uloc = glGetUniformLocation(ViewRenderContext::c_shader().c_ID(), "sizeY");
+  glUniform1i(uloc, ViewRenderContext::worldSizeY());
 
 }
-void ViewApp::changeState(GridIndex idx, CellState newVal)
+void ViewRenderContext::changeState(GridIndex idx, CellState newVal)
 {
-  ViewApp::game().change(idx, newVal);
+  ViewRenderContext::game().change(idx, newVal);
 }
-void ViewApp::randomPopulate(float p)
+void ViewRenderContext::randomPopulate(float p)
 {
-  ViewApp::game().randomPopulate(p);
+  ViewRenderContext::game().randomPopulate(p);
 }
 
-void ViewApp::resizeStateBuffer(int numRow, int numCol)
+void ViewRenderContext::resizeStateBuffer(int numRow, int numCol)
 {
   m_stateBuffer.resize(numRow * numCol);
 }
@@ -274,21 +274,21 @@ void ViewApp::resizeStateBuffer(int numRow, int numCol)
 
 // internal timer related member functions
 
-void ViewApp::changeUpdateInterval(double newVal)
+void ViewRenderContext::changeUpdateInterval(double newVal)
 {
-  if (newVal > 0.01 && newVal < 10.0) ViewApp::m_updateInterval = newVal;
+  if (newVal > 0.01 && newVal < 10.0) ViewRenderContext::m_updateInterval = newVal;
 }
-void ViewApp::mulUpdateInterval(double multiplier)
+void ViewRenderContext::mulUpdateInterval(double multiplier)
 {
-  double newVal{ViewApp::c_updateInterval() * multiplier};
+  double newVal{ViewRenderContext::c_updateInterval() * multiplier};
   changeUpdateInterval(newVal);
 }
-void ViewApp::increUpdateInterval(double diff)
+void ViewRenderContext::increUpdateInterval(double diff)
 {
-  double newVal{ViewApp::c_updateInterval() + diff};
+  double newVal{ViewRenderContext::c_updateInterval() + diff};
   changeUpdateInterval(newVal);
 }
-void ViewApp::changeLastUpdateTime(double newVal)
+void ViewRenderContext::changeLastUpdateTime(double newVal)
 {
-  if (newVal > 0.0) ViewApp::m_lastUpdateTime = newVal;
+  if (newVal > 0.0) ViewRenderContext::m_lastUpdateTime = newVal;
 }

@@ -15,11 +15,11 @@
 #include <string>
 
 // interface class for basic app
-class AppInterface
+class RenderContextInterface
 {
   public:
-  AppInterface() = default;
-  virtual ~AppInterface() = default;
+  RenderContextInterface() = default;
+  virtual ~RenderContextInterface() = default;
 
   // app related member functions
   /// @brief initialize app
@@ -32,10 +32,10 @@ class AppInterface
   virtual void run() = 0;
 };
 
-class BasicApp: public AppInterface
+class BasicRenderContext: public RenderContextInterface
 {
   public:
-  BasicApp(int _width, int _height);
+  BasicRenderContext(int _width, int _height);
 
   GLFWwindow* const c_window() const {
     return m_window;
@@ -64,12 +64,12 @@ class BasicApp: public AppInterface
 };
 
 // app that simply views the entire simulation. Demo only.
-class ViewApp: public BasicApp
+class ViewRenderContext: public BasicRenderContext
 {
   public:
 
-  ViewApp(int _width, int _height, GameInterface& game);
-  ViewApp(int _width, int _height, GameInterface& game, const std::string& _vShaderPath, const std::string& _fShaderPath);
+  ViewRenderContext(int _width, int _height, GameInterface& game);
+  ViewRenderContext(int _width, int _height, GameInterface& game, const std::string& _vShaderPath, const std::string& _fShaderPath);
 
   void setupShader();
   void setupVBO();

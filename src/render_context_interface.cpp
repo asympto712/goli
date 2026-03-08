@@ -1,17 +1,17 @@
-#include "app_interface.hpp"
+#include "render_context_interface.hpp"
 
 void appWindowSizeCallBack(GLFWwindow* window, int width, int height)
 {
     glfwSetWindowSize(window, width, height);
 }
 
-BasicApp::BasicApp(int _width, int _height)
+BasicRenderContext::BasicRenderContext(int _width, int _height)
 {
-  BasicApp::setWindowSize(_width, _height);
-  BasicApp::init();
+  BasicRenderContext::setWindowSize(_width, _height);
+  BasicRenderContext::init();
 }
 
-void BasicApp::init()
+void BasicRenderContext::init()
 {
   if (m_width < 10 || m_height < 10)
   {
@@ -43,7 +43,7 @@ void BasicApp::init()
 
 }
 
-void BasicApp::setWindowSize(int _width, int _height)
+void BasicRenderContext::setWindowSize(int _width, int _height)
 {
   if (_width < 10 || _height < 10)
   {
@@ -57,23 +57,23 @@ void BasicApp::setWindowSize(int _width, int _height)
   }
 }
 
-void BasicApp::setupShader(const std::string& vShader_path, const std::string& fShader_path)
+void BasicRenderContext::setupShader(const std::string& vShader_path, const std::string& fShader_path)
 {
   m_shader.setup(vShader_path, fShader_path);
   m_shaderInit = true;
 }
 
-VFShader& BasicApp::shader()
+VFShader& BasicRenderContext::shader()
 {
   return m_shader;
 }
 
-const VFShader& BasicApp::c_shader() const
+const VFShader& BasicRenderContext::c_shader() const
 {
   return m_shader;
 }
 
-void BasicApp::quit()
+void BasicRenderContext::quit()
 {
   glfwTerminate();
 }
