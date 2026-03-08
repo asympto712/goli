@@ -7,20 +7,48 @@
 #ifdef VIEW_APP
 #include <iostream>
 #include <format>
+constexpr int DefaultNumRow = 3;
+constexpr int DefaultNumCol = 3;
+constexpr float DefaultPopRate = 0.1;
 int main(int argc, char* argv[])
 {
-  ViewApp app{800, 600};
-  if (argc == 3)
+  StandardGoL game{};
+  int numRow, numCol;
+  float popRate;
+  // if at least 2 arguments are supplied try interpreting the 1st and 2nd as the world dimension
+  if (argc >= 3)
   {
-    int numRow, numCol;
-    numRow = std::stoi(argv[1]);
-    numCol = std::stoi(argv[2]);
-    app.setWorldSize(numRow, numCol);
+    try {
+      numRow = std::stoi(argv[1]);
+      numCol = std::stoi(argv[2]);
+    } catch (std::invalid_argument& e) {
+      std::cout << std::format("Could not parse 1st & 2nd arguments as world size: {}\n", e.what());
+    } 
+  } else {
+    // the number of arguments insufficient, so use default values
+    numRow = DefaultNumRow;
+    numCol = DefaultNumCol;
+    popRate = DefaultPopRate;
   }
-  // app.randomPopulate(0.5);
-  app.game().randomPopulate(0.1);
+  // if the 3rd argument is supplied try interpreting it as popRate
+  if (argc == 4)
+  {
+    try {
+      popRate = std::stof(argv[3]);
+    }
+    catch (std::invalid_argument& e) {
+      std::cout << std::format("Could not parse 3rd command line argument as population rate: {}\n", e.what());
+    } 
+    if (popRate < 0.0 || popRate > 1.0)
+    {
+      std::cout << std::format("Cannot interpret the third argument as the propability of live cell. Set the value to be between 0.0 and 1.0. Input value: {}\n", popRate);
+    }
+  }
+  game.setWorldSize(numRow, numCol);
+  game.randomPopulate(popRate);
+  ViewApp app{800, 600, game};
   // std::cout << app.c_game() << std::endl;
-  std::cout << std::format("numRow: {}, numCol: {}\n", app.worldSizeX(), app.worldSizeY());
+  std::cout << std::format("numRow: {}, numCol: {}, popRate:{}\n", app.worldSizeX(), app.worldSizeY(), popRate);
 
   // debugging
   // for (int i{0}; i<5; i++)
@@ -34,14 +62,14 @@ int main(int argc, char* argv[])
 #endif
 
 
-ViewApp::ViewApp(int _width, int _height):
+ViewApp::ViewApp(int _width, int _height, GameInterface& game):
 BasicApp(_width, _height),
-m_game{}
+m_game{game}
 {
 }
 
-ViewApp::ViewApp(int _width, int _height, const std::string& _vShaderPath, const std::string& _fShaderPath):
-ViewApp(_width, _height)
+ViewApp::ViewApp(int _width, int _height, GameInterface& game, const std::string& _vShaderPath, const std::string& _fShaderPath):
+ViewApp(_width, _height, game)
 {
   setShaderPath(_vShaderPath, _fShaderPath);
 }
@@ -181,16 +209,9 @@ void ViewApp::setupVBO()
 
 void ViewApp::updateCellStateTexture()
 {
-  auto numRows{ViewApp::worldSizeX()};
-  auto numCols{ViewApp::worldSizeY()};
-  m_stateBuffer.resize(numRows * numCols);
-  int idx = 0;
-  for (const auto& row: ViewApp::c_game().c_world() | std::views::take(numRows))
-  {
-    // m_stateBuffer.insert(m_stateBuffer.end(), row.begin(), row.begin() + numCols);
-    std::copy(row.begin(), row.begin() + numCols, m_stateBuffer.begin() + idx);
-    idx += numCols;
-  }
+  auto numRows{c_game().sizeX()};
+  auto numCols{c_game().sizeY()};
+  ViewApp::c_game().writeToStateBuffer(m_stateBuffer);
 
   glBindTexture(GL_TEXTURE_2D, m_texID);
   glTexImage2D(

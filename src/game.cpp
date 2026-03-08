@@ -195,7 +195,7 @@ void PackedCellAlignment::resize(size_t newSize)
 
 //========================= custom definitions of some member functions to work with SimpleContainer =====================
 template<>
-void GoL<SimpleContainer>::writeToStateBuffer(std::vector<CellState>& stateBuffer)
+void GoL<SimpleContainer>::writeToStateBuffer(std::vector<CellState>& stateBuffer) const
 {
   auto numRows{GoL<SimpleContainer>::sizeX()};
   auto numCols{GoL<SimpleContainer>::sizeY()};
@@ -301,7 +301,7 @@ void GoL<PackedCellContainer>::setInitConfig()
 }
 
 template<>
-void GoL<PackedCellContainer>::writeToStateBuffer(std::vector<CellState>& stateBuffer)
+void GoL<PackedCellContainer>::writeToStateBuffer(std::vector<CellState>& stateBuffer) const
 {
   auto numRows{GoL<PackedCellContainer>::sizeX()};
   auto numCols{GoL<PackedCellContainer>::sizeY()};

@@ -7,6 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "shader.hpp"
 #include "game.hpp"
+#include "game_interface.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -67,8 +68,8 @@ class ViewApp: public BasicApp
 {
   public:
 
-  ViewApp(int _width, int _height);
-  ViewApp(int _width, int _height, const std::string& _vShaderPath, const std::string& _fShaderPath);
+  ViewApp(int _width, int _height, GameInterface& game);
+  ViewApp(int _width, int _height, GameInterface& game, const std::string& _vShaderPath, const std::string& _fShaderPath);
 
   void setupShader();
   void setupVBO();
@@ -90,10 +91,10 @@ class ViewApp: public BasicApp
     return m_stopped;
   }
 
-  StandardGoL& game() {
+  GameInterface& game() {
     return m_game;
   }
-  const StandardGoL& c_game() const {
+  const GameInterface& c_game() const {
     return m_game;
   }
 
@@ -143,7 +144,7 @@ class ViewApp: public BasicApp
   }
 
   private:
-  StandardGoL m_game;
+  GameInterface& m_game;
   std::string m_vShaderPath = "src/shader/view_app.vs";
   std::string m_fShaderPath = "src/shader/view_app.fs";
   GLuint m_VBO[5];

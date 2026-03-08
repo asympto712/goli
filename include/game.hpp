@@ -206,53 +206,6 @@ concept StateRefIndexable =
 template<ResizableWorld Container>
 void containerAssign(Container& lh, const Container& rh);
 
-struct GridIndex {
-    int x, y;
-
-    GridIndex(int _x, int _y) : x{_x}, y{_y} {}
-
-    // Addition with another GridIndex
-    GridIndex operator+(const GridIndex& other) const
-    {
-        return {x + other.x, y + other.y};
-    }
-
-    GridIndex& operator+=(const GridIndex& other)
-    {
-        this->x += other.x;
-        this->y += other.y;
-        return *this;
-    }
-
-    // Subtraction with another GridIndex
-    GridIndex operator-(const GridIndex& other) const
-    {
-        return {x - other.x, y - other.y};
-    }
-
-    GridIndex& operator-=(const GridIndex& other)
-    {
-        this->x -= other.x;
-        this->y -= other.y;
-        return *this;
-    }
-
-    GridIndex& operator=(const GridIndex& other)
-    {
-        this->x = other.x;
-        this->y = other.y;
-        return *this;
-    }
-
-    bool operator==(const GridIndex& other) const {
-        return (this->x == other.x && this->y == other.y);
-    }
-
-    bool operator==(GridIndex& other) {
-        return (this->x == other.x && this->y == other.y);
-    }
-};
-
 template<ResizableWorld Container>
 class CA: public GameInterface
 {
@@ -287,21 +240,13 @@ class CA: public GameInterface
     const CellState get_c(GridIndex idx) const;
 
     // change the state of the cell in the main buffer and return the old value
-    CellState change(GridIndex idx, CellState newVal);
+    CellState change(GridIndex idx, CellState newVal) override;
     // change the state of the cell in the sub buffer and return the old value
     CellState changeTmp(GridIndex idx, CellState newVal);
 
     /// @brief swap the two underlying container
     void swap();
-
-    const int sizeX() const { return m_numRow; }
-    const int sizeY() const { return m_numCol; }
-    std::pair<int, int> size() const { return {sizeX(), sizeY()}; }
     
-    /// @brief change the world size. If the new size would outsize the underlying container,
-    /// resize the container as well. If not, it only changes the internal variables that keep track of the world size.
-    /// so the underlying container might be bigger than the actual world
-    void setWorldSize(int new_numRow, int new_numCol);
     /// @brief change the size of the underlying container
     void resizeContainer(int new_sizeX, int new_sizeY);
     /// @brief return the size of the underlying container
@@ -314,12 +259,16 @@ class CA: public GameInterface
     // For example, (-1, -1) should return (m_numRow-1, m_numCol-1)
     GridIndex foldIndex(GridIndex idx) const;
 
-    virtual void randomPopulate(float p) = 0;
     float drawRngFloat() { 
         auto val = m_rngGen();
         return (float) val / (float) m_rngGen.max();
     }
 
+    // GameInterface functions
+    void setWorldSize(int new_numRow, int new_numCol) override;
+    const int sizeX() const override { return m_numRow; }
+    const int sizeY() const override { return m_numCol; }
+    std::pair<int, int> size() const override { return {sizeX(), sizeY()}; }
 
     private:
     Container m_world, m_tmp_world;
@@ -359,7 +308,6 @@ class GoL: public CA<Container>
         m_boundary_cnd = new_bc;
     }
 
-    void randomPopulate(float p) override;
     // set the initial configuration to be the current m_world
     void setInitConfig();
 
@@ -367,10 +315,11 @@ class GoL: public CA<Container>
     void countLiveNeighbors(std::vector<std::vector<int>>& out) const;
 
     // GameInterface functions
+    void randomPopulate(float p) override;
     void step() override;
     void stepBack() override;
     void reset() override;
-    void writeToStateBuffer(std::vector<CellState> & stateBuffer) override;
+    void writeToStateBuffer(std::vector<CellState> & stateBuffer) const override;
     
     private:
     // 0 if fixed (to 0) b.c
